@@ -13,18 +13,21 @@ def get_data(verbose = True):
     Currently just grabs some of the SC_241 data from the PRL.
     """
     root = "/Users/susanclark/Dropbox/GALFA-Planck/Big_Files/"
-    data_fn = "SC_241.66_28.675.best_20_xyt_w75_s15_t70_galfapixcorr.fits"
-    data = fits.getdata(root + data_fn)
+    data_fn = root + "SC_241.66_28.675.best_20_xyt_w75_s15_t70_galfapixcorr.fits"
+    data = fits.getdata(data_fn)
     
     # Print header info
     if verbose == True:
-        print(fits.getheader(root + data_fn))
+        print(fits.getheader(data_fn))
         
     return data, data_fn
 
+# Load GALFA-HI RHT data
 galfa, galfa_fn = get_data()
-ipoints, jpoints, hthets, naxis1, naxis2 = RHT_tools.get_RHT_data(galfa_fn)
 
+# Separate into indices and R(theta) arrays
+ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(galfa_fn)
+print("There are %d theta bins" %len(rthetas))
 
 
     
