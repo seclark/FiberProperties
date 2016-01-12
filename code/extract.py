@@ -2,6 +2,11 @@ from __future__ import division, print_function
 import numpy as np
 from astropy.io import fits
 
+# RHT helper code
+import sys 
+sys.path.insert(0, '../../RHT')
+import RHT_tools
+
 def get_data(verbose = True):
     """
     This can be rewritten for whatever data we're using.
@@ -15,7 +20,13 @@ def get_data(verbose = True):
     if verbose == True:
         print(fits.getheader(root + data_fn))
         
-    return data
+    return data, data_fn
+
+galfa, galfa_fn = get_data()
+ipoints, jpoints, hthets, naxis1, naxis2 = RHT_tools.get_RHT_data(galfa_fn)
+
+
+
     
 
     
