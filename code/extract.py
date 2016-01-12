@@ -27,7 +27,18 @@ galfa, galfa_fn = get_data()
 
 # Separate into indices and R(theta) arrays
 ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(galfa_fn)
-print("There are %d theta bins" %len(rthetas))
+npoints, nthetas = rthetas.shape
+print("There are %d theta bins" %nthetas)
+
+# Number of theta bins to separate RHT data into 
+nbins = 10
+
+cube_thetas = np.zeros((naxis1, naxis2, nthetas), np.float_)
+cube_thetas[ipoints, jpoints, :] = rthetas
+theta_separated_backprojection = np.zeros((naxis1, naxis2, nbins), np.float_)
+for i in xrange(nbins):
+    theta_separated_backprojection[:, :, i] = np.sum(cube_thetas[:, :, i*nbins:(i+1)*nbins], axis=2)
+    
 
 
     
