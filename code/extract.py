@@ -87,15 +87,21 @@ def make_footprint(radius = 10):
     
     return fp
     
-    
+# Create an array of backprojections binned by theta    
 theta_separated_backprojection = bin_data_by_theta(nbins = 10)
 
 # Scale to [0, 1]
 theta_separated_backprojection = theta_separated_backprojection/np.nanmax(theta_separated_backprojection)
+
+# Create a circular footprint for use in erosion / dilation.
 footprint = make_footprint(radius = 30)
+
+# Erode and dilate the backprojection to rid us of single pixels and/or small isolated objects.
+# As a test, we are working with thetabin = 4
 eroded_theta4 = erode_data(theta_separated_backprojection[:, :, 4], footprint = footprint)
 dilated_theta4 = dilate_data(eroded_theta4, footprint = footprint)
 
+# Simple plotting -- show original, eroded, and dilated data for thetabin = 4.
 fig = plt.figure()
 ax1 = fig.add_subplot(311)
 ax2 = fig.add_subplot(312)
