@@ -94,7 +94,7 @@ theta_separated_backprojection = bin_data_by_theta(nbins = 10)
 theta_separated_backprojection = theta_separated_backprojection/np.nanmax(theta_separated_backprojection)
 
 # Create a circular footprint for use in erosion / dilation.
-footprint = make_footprint(radius = 30)
+footprint = make_footprint(radius = 3)
 
 # Erode and dilate the backprojection to rid us of single pixels and/or small isolated objects.
 # As a test, we are working with thetabin = 4
@@ -111,7 +111,11 @@ ax1.imshow(theta_separated_backprojection[:, :, 4])
 ax2.imshow(eroded_theta4)
 ax3.imshow(dilated_theta4)
 
-    
+ax1.set_title("Original backprojection")
+ax2.set_title("Eroded backprojection")
+ax3.set_title("Dilated backprojection")
+
+#plt.savefig("marytest.png")
 
     
 
