@@ -55,7 +55,7 @@ def bin_data_by_theta(nbins = 10):
 
 def erode_data(data, footprint = None):
     
-    if footprint != None:
+    if footprint is not None:
         eroded_data = grey_erosion(data, footprint = footprint)
     else:
         eroded_data = grey_erosion(data, size=(10, 10))
@@ -64,7 +64,7 @@ def erode_data(data, footprint = None):
     
 def dilate_data(data, footprint = None):
     
-    if footprint != None:
+    if footprint is not None:
         dilated_data = grey_dilation(data, footprint = footprint)
     else:
         dilated_data = grey_dilation(data, size=(10, 10))
