@@ -25,23 +25,21 @@ def get_data(chan = 20, verbose = True):
         
     return data, data_fn
 
-def bin_data_by_theta(nbins = 10):
+def bin_data_by_theta(data_fn, nbins = 10):
     """
     Places RHT data into cube binned by theta. 
     
     Input:
+    data_fn :: fits filename for RHT data
     nbins :: number of theta bins to separate RHT data into (default = 10)
     
     Output:
     theta_separated_backprojection :: 3D array, dimensions (naxis1, naxis2, nbins).
                                    :: contains backprojection summed into nbins chunks.
     """
-    
-    # Load GALFA-HI RHT data
-    galfa, galfa_fn = get_data()
 
     # Separate into indices and R(theta) arrays
-    ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(galfa_fn)
+    ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
     npoints, nthetas = rthetas.shape
     print("There are %d theta bins" %nthetas)
 
@@ -52,6 +50,25 @@ def bin_data_by_theta(nbins = 10):
         theta_separated_backprojection[:, :, i] = np.sum(cube_thetas[:, :, i*nbins:(i+1)*nbins], axis=2)
         
     return theta_separated_backprojection
+    
+def coadd_by_angle():
+    """
+    Adds theta-binned velocity slices
+    """
+    # Define channels
+    channels = [19, 20]
+    
+    # Number of desired theta bins
+    nthetabins = 10
+    
+    # Initial data
+    data, data_fn = get_data(channels[0], verbose = False)
+    theta_separated_backprojection = bin_data_by_theta(data_fn, nbins = nthetabins)
+    
+    # Add to existing theta_separated_backprojection
+    for chan in channels[1:]:
+        data, data_fn = get_data(chan, verbose = False)
+        theta_separated_backprojection += bin_data_by_theta(data_fn, nbins = nthetabins)
 
 def erode_data(data, footprint = None):
     
@@ -88,6 +105,10 @@ def make_footprint(radius = 10):
     return fp
 
 def erode_dilate_example(nbins = 10, footprint_radius = 3):
+    
+    # Grab default RHT data
+    galfa, galfa_fn = get_data()
+
     # Create an array of backprojections binned by theta    
     theta_separated_backprojection = bin_data_by_theta(nbins = nbins)
 
