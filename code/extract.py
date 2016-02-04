@@ -9,14 +9,14 @@ import sys
 sys.path.insert(0, '../../RHT')
 import RHT_tools
 
-def get_data(verbose = True):
+def get_data(chan = 20, verbose = True):
     """
     This can be rewritten for whatever data we're using.
     Currently just grabs some of the SC_241 data from the PRL.
     """
     
     root = "/Users/susanclark/Dropbox/GALFA-Planck/Big_Files/"
-    data_fn = root + "SC_241.66_28.675.best_20_xyt_w75_s15_t70_galfapixcorr.fits"
+    data_fn = root + "SC_241.66_28.675.best_"+str(chan)+"_xyt_w75_s15_t70_galfapixcorr.fits"
     data = fits.getdata(data_fn)
     
     # Print header info
