@@ -83,6 +83,10 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     
     """
     
+    # Read in all SC_241 *original* data
+    SC_241_all = fits.getdata("/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits")
+    nchannels_total, naxis2, naxis1 = SC_241_all.shape
+    
     # Get thetas for given window length
     thets = RHT_tools.get_thets(wlen)
     
@@ -99,9 +103,8 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     channels = [19, 20]
     nchannels = len(channels)
     
-    # Initial data
-    data, data_fn = get_data(channels[0], verbose = False)
-    ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
+    # Create a circular footprint for use in erosion / dilation.
+    footprint = make_footprint(footprint_radius = 3)
     
     # Initialize (x, y, v) cube
     xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
@@ -111,9 +114,25 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
         data, data_fn = get_data(channels[ch_], verbose = False)
         ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
         
-        # Sum relevant thetas, place into channel bin.
-        xyv_theta0[jpoints, ipoints, ch_] = np.sum(rthetas[indx_start:(indx_stop + 1)])
+        # Sum relevant thetas
+        thetasum_bp = np.sum(rthetas[indx_start:(indx_stop + 1)])
         
+        # Erode and dilate
+        eroded_thetasum_bp = erode_data(thetasum_bp, footprint = footprint)
+        dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint)
+        
+        # Turn into mask
+        mask = np.ones(dilated_thetasum_bp.shape)
+        mask[dilated_thetasum_bp <= 0] = 0
+        
+        # Apply mask to relevant velocity data
+        realdata_vel_slice = SC_241_all[ch_, :, :]
+        realdata_vel_slice[mask == 0] = 0
+        
+        # Place into channel bin
+        xyv_theta0[jpoints, ipoints, ch_] = realdata_vel_slice
+        
+    
 
 def erode_data(data, footprint = None):
     
