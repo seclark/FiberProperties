@@ -70,6 +70,19 @@ def coadd_by_angle():
         data, data_fn = get_data(chan, verbose = False)
         theta_separated_backprojection += bin_data_by_theta(data_fn, nbins = nthetabins)
 
+def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10):
+    """
+    Creates cube of Backprojection(x, y, v | theta_0)
+    where dimensions are x, y, and velocity
+    and each velocity slice contains the backprojection for that velocity, at a single theta.
+    
+    theta_0         :: approximate center theta value (in degrees). 
+                       Actual value will be closest bin in xyt data.
+    theta_bandwidth :: approximate width of theta range desired (in degrees)
+    
+    """
+    
+
 def erode_data(data, footprint = None):
     
     if footprint is not None:
