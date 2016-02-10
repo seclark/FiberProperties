@@ -70,7 +70,7 @@ def coadd_by_angle():
         data, data_fn = get_data(chan, verbose = False)
         theta_separated_backprojection += bin_data_by_theta(data_fn, nbins = nthetabins)
 
-def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10):
+def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     """
     Creates cube of Backprojection(x, y, v | theta_0)
     where dimensions are x, y, and velocity
@@ -79,9 +79,38 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10):
     theta_0         :: approximate center theta value (in degrees). 
                        Actual value will be closest bin in xyt data.
     theta_bandwidth :: approximate width of theta range desired (in degrees)
+    wlen            :: RHT window length
     
     """
     
+    # Get thetas for given window length
+    thets = RHT_tools.get_thets(wlen)
+    
+    # Get index of theta bin that is closest to theta_0
+    indx_0 = (np.abs(thets - np.radians(theta_0))).argmin()
+    
+    # Get index of beginning and ending thetas that are approximately theta_bandwidth centered on theta_0
+    indx_start = (np.abs(thets - (thets[indx_0] - np.radians(theta_bandwidth/2.0)))).argmin()
+    indx_stop = (np.abs(thets - (thets[indx_0] + np.radians(theta_bandwidth/2.0)))).argmin()
+    
+    print("Actual theta range will be {} to {} degrees".format(np.degrees(thets[indx_start]), np.degrees(thets[indx_stop])))
+    
+    # Define velocity channels
+    channels = [19, 20]
+    nchannels = len(channels)
+    
+    # Initial data
+    data, data_fn = get_data(channels[0], verbose = False)
+    ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
+    
+    # Initialize (x, y, v) cube
+    xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
+    
+    for ch_ in channels:
+        data, data_fn = get_data(channels[0], verbose = False)
+        ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
+        xyv_theta0[:, :, ch_] = rthetas[indx_start:(indx_stop + 1)]
+        
 
 def erode_data(data, footprint = None):
     
