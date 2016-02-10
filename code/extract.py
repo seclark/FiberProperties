@@ -99,6 +99,7 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     indx_stop = (np.abs(thets - (thets[indx_0] + np.radians(theta_bandwidth/2.0)))).argmin()
     
     print("Actual theta range will be {} to {} degrees".format(np.degrees(thets[indx_start]), np.degrees(thets[indx_stop])))
+    print("Theta indices will be {} to {}".format(indx_start, indx_stop))
     
     # Define velocity channels
     channels = [19, 20]
@@ -116,9 +117,11 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
         ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
         
         # Sum relevant thetas
-        thetasum_bp = np.sum(rthetas[indx_start:(indx_stop + 1)])
+        thetasum_bp = np.zeros((naxis2, naxis1), np.float_)
+        thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis=1)
         
         # Erode and dilate
+        print(thetasum_bp.shape)
         eroded_thetasum_bp = erode_data(thetasum_bp, footprint = footprint)
         dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint)
         
@@ -131,7 +134,7 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
         realdata_vel_slice[mask == 0] = 0
         
         # Place into channel bin
-        xyv_theta0[jpoints, ipoints, ch_i] = realdata_vel_slice
+        xyv_theta0[:, :, ch_i] = realdata_vel_slice
         
     return xyv_theta0
     
@@ -182,7 +185,7 @@ def erode_dilate_example(nbins = 10, footprint_radius = 3):
     theta_separated_backprojection = theta_separated_backprojection/np.nanmax(theta_separated_backprojection)
 
     # Create a circular footprint for use in erosion / dilation.
-    footprint = make_footprint(footprint_radius = 3)
+    footprint = make_footprint(radius = 3)
 
     # Erode and dilate the backprojection to rid us of single pixels and/or small isolated objects.
     # As a test, we are working with thetabin = 4
