@@ -107,9 +107,12 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
     
     for ch_ in channels:
-        data, data_fn = get_data(channels[0], verbose = False)
+        # Grab channel-specific RHT data
+        data, data_fn = get_data(channels[ch_], verbose = False)
         ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
-        xyv_theta0[:, :, ch_] = rthetas[indx_start:(indx_stop + 1)]
+        
+        # Sum relevant thetas, place into channel bin.
+        xyv_theta0[jpoints, ipoints, ch_] = np.sum(rthetas[indx_start:(indx_stop + 1)])
         
 
 def erode_data(data, footprint = None):
