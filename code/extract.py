@@ -15,7 +15,8 @@ def get_data(chan = 20, verbose = True):
     Currently just grabs some of the SC_241 data from the PRL.
     """
     
-    root = "/Users/susanclark/Dropbox/GALFA-Planck/Big_Files/"
+    #root = "/Users/susanclark/Dropbox/GALFA-Planck/Big_Files/"
+    root = "/Volumes/DataDavy/GALFA/SC_241/cleaned/galfapix_corrected/"
     data_fn = root + "SC_241.66_28.675.best_"+str(chan)+"_xyt_w75_s15_t70_galfapixcorr.fits"
     data = fits.getdata(data_fn)
     
@@ -104,14 +105,14 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     nchannels = len(channels)
     
     # Create a circular footprint for use in erosion / dilation.
-    footprint = make_footprint(footprint_radius = 3)
+    footprint = make_footprint(radius = 3)
     
     # Initialize (x, y, v) cube
     xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
     
-    for ch_ in channels:
+    for ch_i, ch_ in enumerate(channels):
         # Grab channel-specific RHT data
-        data, data_fn = get_data(channels[ch_], verbose = False)
+        data, data_fn = get_data(ch_, verbose = False)
         ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
         
         # Sum relevant thetas
@@ -130,8 +131,9 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
         realdata_vel_slice[mask == 0] = 0
         
         # Place into channel bin
-        xyv_theta0[jpoints, ipoints, ch_] = realdata_vel_slice
+        xyv_theta0[jpoints, ipoints, ch_i] = realdata_vel_slice
         
+    return xyv_theta0
     
 
 def erode_data(data, footprint = None):
