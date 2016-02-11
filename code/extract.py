@@ -86,6 +86,7 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     
     # Read in all SC_241 *original* data
     SC_241_all = fits.getdata("/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits")
+    hdr = fits.getheader("/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits")
     nchannels_total, naxis2, naxis1 = SC_241_all.shape
     
     # Get thetas for given window length
@@ -102,7 +103,7 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     print("Theta indices will be {} to {}".format(indx_start, indx_stop))
     
     # Define velocity channels
-    channels = [19, 20]
+    channels = [16, 17, 18, 19, 20, 21, 22, 23, 24]
     nchannels = len(channels)
     
     # Create a circular footprint for use in erosion / dilation.
@@ -118,10 +119,9 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
         
         # Sum relevant thetas
         thetasum_bp = np.zeros((naxis2, naxis1), np.float_)
-        thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis=1)
+        thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis = 1)
         
         # Erode and dilate
-        print(thetasum_bp.shape)
         eroded_thetasum_bp = erode_data(thetasum_bp, footprint = footprint)
         dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint)
         
@@ -136,7 +136,14 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
         # Place into channel bin
         xyv_theta0[:, :, ch_i] = realdata_vel_slice
         
-    return xyv_theta0
+    #return xyv_theta0
+    hdr["CHSTART"] = channels[0]
+    hdr["CHSTOP"] = channels[-1]
+    hdr["NAXIS3"] = len(channels)
+    hdr["THETA0"] = theta_0
+    hdr["THETAB"] = theta_bandwidth
+    
+    fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+".fits", xyv_theta0, hdr)
     
 
 def erode_data(data, footprint = None):
