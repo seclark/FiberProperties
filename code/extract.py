@@ -171,7 +171,7 @@ def dilate_data(data, footprint = None):
     
     return dilated_data
 
-def make_gaussian_footprint(theta_0, wlen = 75):
+def make_gaussian_footprint(theta_0 = 0, wlen = 50):
     """
     Make a gaussian footprint 
     """
@@ -194,6 +194,30 @@ def make_gaussian_footprint(theta_0, wlen = 75):
     
     return fp
 
+def plot_gaussian_footprints():
+    """
+    Plot various gaussian footprints for an example
+    """
+    
+    fig = plt.figure(facecolor = "white")
+    ax1 = fig.add_subplot(151)
+    ax2 = fig.add_subplot(152)
+    ax3 = fig.add_subplot(153)
+    ax4 = fig.add_subplot(154)
+    ax5 = fig.add_subplot(155)
+    
+    axes = [ax1, ax2, ax3, ax4, ax5]
+    
+    angles = [0, 30, 70, 90, 110]
+    
+    wlen = 50
+    
+    for i, ang in enumerate(angles):
+        fp = make_gaussian_footprint(theta_0 = ang, wlen = wlen)
+        axes[i].imshow(fp.reshape(wlen, wlen), cmap = "cubehelix")
+        axes[i].set_title(r"$"+str(ang)+"^\circ$")
+        axes[i].set_xticks([])
+        axes[i].set_yticks([])
     
 def make_circular_footprint(radius = 10):
     """
