@@ -3,6 +3,7 @@ import numpy as np
 from astropy.io import fits
 from scipy.ndimage.morphology import grey_erosion, grey_dilation
 import matplotlib.pyplot as plt
+from scipy.stats import multivariate_normal
 
 # RHT helper code
 import sys 
@@ -169,6 +170,30 @@ def dilate_data(data, footprint = None):
         dilated_data = grey_dilation(data, size=(10, 10))
     
     return dilated_data
+
+def make_gaussian_footprint(theta_0, wlen = 75):
+    """
+    Make a gaussian footprint 
+    """
+    
+    fp = np.zeros((wlen, wlen), np.float_)
+    mnvals = np.indices(fp.shape)
+    mvals = mnvals[:, :][0] # These are the y points
+    nvals = mnvals[:, :][1] # These are the x points
+    
+    initial_cov = np.asarray([[100, 0], [0, 10]])
+    psi = np.radians(theta_0)
+    rotation_matrix = np.asarray([[np.cos(psi), -np.sin(psi)], [np.sin(psi), np.cos(psi)]])
+    covariance_matrix = np.dot(rotation_matrix, np.dot(initial_cov, rotation_matrix.T))
+    
+    var = multivariate_normal(mean=[wlen/2.0, wlen/2.0], cov=covariance_matrix)
+    
+    indices = [(y, x) for y, x in zip(mvals.ravel(), nvals.ravel())]
+
+    fp = var.pdf(indices)
+    
+    return fp
+
     
 def make_circular_footprint(radius = 10):
     """
@@ -198,7 +223,7 @@ def erode_dilate_example(nbins = 10, footprint_radius = 3):
     theta_separated_backprojection = theta_separated_backprojection/np.nanmax(theta_separated_backprojection)
 
     # Create a circular footprint for use in erosion / dilation.
-    footprint = make_footprint(radius = 3)
+    footprint = make_circular_footprint(radius = 3)
 
     # Erode and dilate the backprojection to rid us of single pixels and/or small isolated objects.
     # As a test, we are working with thetabin = 4
