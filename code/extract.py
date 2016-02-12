@@ -170,9 +170,9 @@ def dilate_data(data, footprint = None):
     
     return dilated_data
     
-def make_footprint(radius = 10):
+def make_circular_footprint(radius = 10):
     """
-    Make a footprint of a given radius (in pixels) for use in erosion/dilation.
+    Make a circular footprint of a given radius (in pixels) for use in erosion/dilation.
     """
     
     fp = np.zeros((2*radius+1, 2*radius+1), np.float_)
