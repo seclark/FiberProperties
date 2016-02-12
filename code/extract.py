@@ -112,7 +112,7 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     nchannels = len(channels)
     
     # Create a circular footprint for use in erosion / dilation.
-    footprint = make_footprint(radius = 3)
+    footprint = make_circular_footprint(radius = 3)
     
     # Initialize (x, y, v) cube
     xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
@@ -149,7 +149,7 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     hdr["THETAB"] = theta_bandwidth
     hdr["CRPIX3"] = hdr["CRPIX3"] - channels[0]
     
-    fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+".fits", xyv_theta0, hdr)
+    fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+"_new_naxis3.fits", xyv_theta0, hdr)
     
     return xyv_theta0, hdr
 
