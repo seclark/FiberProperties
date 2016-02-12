@@ -90,7 +90,8 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     
     # Velocity data should be third axis
     SC_241_all = SC_241_all.swapaxes(0, 2)
-    naxis1, naxis2, nchannels_total = SC_241_all.shape
+    SC_241_all = SC_241_all.swapaxes(0, 1)
+    naxis2, naxis1, nchannels_total = SC_241_all.shape
     
     # Get thetas for given window length
     thets = RHT_tools.get_thets(wlen)
@@ -106,7 +107,7 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     print("Theta indices will be {} to {}".format(indx_start, indx_stop))
     
     # Define velocity channels
-    channels = [16, 17]#, 18, 19, 20, 21, 22, 23, 24]
+    channels = [16, 17, 18, 19, 20, 21, 22, 23, 24]
     nchannels = len(channels)
     
     # Create a circular footprint for use in erosion / dilation.
@@ -147,9 +148,9 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     hdr["THETAB"] = theta_bandwidth
     hdr["CRPIX3"] = hdr["CRPIX3"] - channels[0]
     
-    #fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+".fits", xyv_theta0, hdr)
+    fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+".fits", xyv_theta0, hdr)
     
-    return xyv_theta, hdr
+    return xyv_theta0, hdr
 
 def erode_data(data, footprint = None):
     
