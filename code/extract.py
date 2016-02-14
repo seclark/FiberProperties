@@ -212,6 +212,7 @@ def make_gaussian_footprint(theta_0 = 0, wlen = 50):
     indices = [(y, x) for y, x in zip(mvals.ravel(), nvals.ravel())]
 
     fp = var.pdf(indices)
+    fp = fp.reshape(wlen, wlen)
     
     return fp
 
@@ -235,7 +236,7 @@ def plot_gaussian_footprints():
     
     for i, ang in enumerate(angles):
         fp = make_gaussian_footprint(theta_0 = ang, wlen = wlen)
-        axes[i].imshow(fp.reshape(wlen, wlen), cmap = "cubehelix")
+        axes[i].imshow(fp, cmap = "cubehelix")
         axes[i].set_title(r"$"+str(ang)+"^\circ$")
         axes[i].set_xticks([])
         axes[i].set_yticks([])
