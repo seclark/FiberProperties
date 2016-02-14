@@ -122,11 +122,14 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75, ga
     print("Theta indices will be {} to {}".format(indx_start, indx_stop))
     
     # Define velocity channels
-    channels = [16, 17, 18, 19, 20, 21, 22, 23, 24]
+    channels = [20]#[16, 17, 18, 19, 20, 21, 22, 23, 24]
     nchannels = len(channels)
     
     # Create a circular footprint for use in erosion / dilation.
-    footprint = make_circular_footprint(radius = 3)
+    if gaussian_footprint is True:
+        footprint = make_gaussian_footprint(theta_0 = theta_0, wlen = wlen)
+    else:
+        footprint = make_circular_footprint(radius = 3)
     
     # Initialize (x, y, v) cube
     xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
