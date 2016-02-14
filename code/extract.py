@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 from astropy.io import fits
-from scipy.ndimage.morphology import grey_erosion, grey_dilation
+from scipy.ndimage.morphology import grey_erosion, grey_dilation, binary_erosion, binary_dilation
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 
@@ -78,15 +78,16 @@ def make_cube():
     allQs = np.load("/Volumes/DataDavy/GALFA/SC_241/thetarht_maps/Q_RHT_SC_241_best_ch16_to_24_w75_s15_t70_bwrm_galfapixcorr.npy")
     allUs = np.load("//Volumes/DataDavy/GALFA/SC_241/thetarht_maps/U_RHT_SC_241_best_ch16_to_24_w75_s15_t70_bwrm_galfapixcorr.npy")
 
-    mean_angle = np.degrees(np.mod(0.5*np.arctan2(np.nanmean(allUs), np.nanmean(allQs)), np.pi))
+    mean_angle = np.degrees(np.mod(0.5*np.arctan2(np.nanmean(allUs[:, 4000:]), np.nanmean(allQs[:, 4000:])), np.pi))
 
+    print("Using mean angle {}".format(mean_angle))
     xyv_theta0, hdr = single_theta_velocity_cube(theta_0 = mean_angle, theta_bandwidth = 10)
     
     #fits.writeto("xyv_theta0_"+str(np.round(theta_0))+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+"_new_naxis3.fits", xyv_theta0, hdr)
     
     return xyv_theta0, hdr
 
-def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75, gaussian_footprint = True):
+def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, gaussian_footprint = True):
     """
     Creates cube of Backprojection(x, y, v | theta_0)
     where dimensions are x, y, and velocity
@@ -127,9 +128,11 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75, ga
     
     # Create a circular footprint for use in erosion / dilation.
     if gaussian_footprint is True:
-        footprint = make_gaussian_footprint(theta_0 = -theta_0, wlen = wlen)
+        footprint = make_gaussian_footprint(theta_0 = -theta_0, wlen = 7)
     else:
         footprint = make_circular_footprint(radius = 3)
+        
+    circular_footprint = make_circular_footprint(radius = 2)
     
     # Initialize (x, y, v) cube
     xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
@@ -144,12 +147,21 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75, ga
         thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis = 1)
         
         # Erode and dilate
-        eroded_thetasum_bp = erode_data(thetasum_bp, footprint = footprint)
-        dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint)
+        # Circular erosion
+        #eroded_thetasum_bp = erode_data(thetasum_bp, footprint = circular_footprint)
+        
+        # Gaussian dilation
+        #dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint, structure = footprint)
         
         # Turn into mask
-        mask = np.ones(dilated_thetasum_bp.shape)
-        mask[dilated_thetasum_bp <= 0] = 0
+        #mask = np.ones(dilated_thetasum_bp.shape)
+        #mask[dilated_thetasum_bp <= 0] = 0
+        
+        # Try making this a mask first, then binary erosion/dilation
+        masked_thetasum_bp = np.ones(thetasum_bp.shape)
+        masked_thetasum_bp[thetasum_bp <= 0] = 0
+        mask = binary_erosion(masked_thetasum_bp, structure = circular_footprint)
+        mask = binary_dilation(mask, structure = footprint)
         
         # Apply mask to relevant velocity data
         realdata_vel_slice = SC_241_all[:, :, ch_]
