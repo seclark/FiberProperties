@@ -127,7 +127,7 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75, ga
     
     # Create a circular footprint for use in erosion / dilation.
     if gaussian_footprint is True:
-        footprint = make_gaussian_footprint(theta_0 = theta_0, wlen = wlen)
+        footprint = make_gaussian_footprint(theta_0 = -theta_0, wlen = wlen)
     else:
         footprint = make_circular_footprint(radius = 3)
     
@@ -174,19 +174,19 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75, ga
     
     return xyv_theta0, hdr
 
-def erode_data(data, footprint = None):
+def erode_data(data, footprint = None, structure = None):
     
     if footprint is not None:
-        eroded_data = grey_erosion(data, footprint = footprint)
+        eroded_data = grey_erosion(data, footprint = footprint, structure = structure)
     else:
         eroded_data = grey_erosion(data, size=(10, 10))
     
     return eroded_data
     
-def dilate_data(data, footprint = None):
+def dilate_data(data, footprint = None, structure = None):
     
     if footprint is not None:
-        dilated_data = grey_dilation(data, footprint = footprint)
+        dilated_data = grey_dilation(data, footprint = footprint, structure = structure)
     else:
         dilated_data = grey_dilation(data, size=(10, 10))
     
@@ -202,7 +202,7 @@ def make_gaussian_footprint(theta_0 = 0, wlen = 50):
     mvals = mnvals[:, :][0] # These are the y points
     nvals = mnvals[:, :][1] # These are the x points
     
-    initial_cov = np.asarray([[100, 0], [0, 10]])
+    initial_cov = np.asarray([[10, 0], [0, 1]])
     psi = np.radians(theta_0)
     rotation_matrix = np.asarray([[np.cos(psi), -np.sin(psi)], [np.sin(psi), np.cos(psi)]])
     covariance_matrix = np.dot(rotation_matrix, np.dot(initial_cov, rotation_matrix.T))
