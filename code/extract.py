@@ -71,8 +71,22 @@ def coadd_by_angle():
     for chan in channels[1:]:
         data, data_fn = get_data(chan, verbose = False)
         theta_separated_backprojection += bin_data_by_theta(data_fn, nbins = nthetabins)
+        
+def make_cube():
+    
+    # Let's choose center angle based on average angle for high latitude, fiber-y region
+    allQs = np.load("/Volumes/DataDavy/GALFA/SC_241/thetarht_maps/Q_RHT_SC_241_best_ch16_to_24_w75_s15_t70_bwrm_galfapixcorr.npy")
+    allUs = np.load("//Volumes/DataDavy/GALFA/SC_241/thetarht_maps/U_RHT_SC_241_best_ch16_to_24_w75_s15_t70_bwrm_galfapixcorr.npy")
 
-def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
+    mean_angle = np.degrees(np.mod(0.5*np.arctan2(np.nanmean(allUs), np.nanmean(allQs)), np.pi))
+
+    xyv_theta0, hdr = single_theta_velocity_cube(theta_0 = mean_angle, theta_bandwidth = 10)
+    
+    #fits.writeto("xyv_theta0_"+str(np.round(theta_0))+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+"_new_naxis3.fits", xyv_theta0, hdr)
+    
+    return xyv_theta0, hdr
+
+def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75, gaussian_footprint = True):
     """
     Creates cube of Backprojection(x, y, v | theta_0)
     where dimensions are x, y, and velocity
@@ -153,7 +167,7 @@ def single_theta_velocity_cube(theta_0 = 20, theta_bandwidth = 10, wlen = 75):
     xyv_theta0 = xyv_theta0.swapaxes(0, 2)
     xyv_theta0 = xyv_theta0.swapaxes(1, 2)
     
-    fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+"_new_naxis3.fits", xyv_theta0, hdr)
+    #fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+"_new_naxis3.fits", xyv_theta0, hdr)
     
     return xyv_theta0, hdr
 
@@ -273,7 +287,8 @@ def erode_dilate_example(nbins = 10, footprint_radius = 3):
     ax3.set_title("Dilated backprojection")
 
     #plt.savefig("marytest.png")
-
     
+
+
 
     
