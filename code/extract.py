@@ -3,9 +3,11 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from scipy.ndimage.morphology import grey_erosion, grey_dilation, binary_erosion, binary_dilation
+from scipy import ndimage
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 from reproject import reproject_interp
+import copy
 
 # RHT helper code
 import sys 
@@ -297,9 +299,9 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
     
     #fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+"_new_naxis3.fits", xyv_theta0, hdr)
     
-    return xyv_theta0, hdr
+    return xyv_theta0, hdr, mask
     
-def background_subtract(mask, data):
+def background_subtract(mask, data, plot = True):
     
     # Create reverse mask
     rev_mask = np.zeros(mask.shape)
@@ -308,9 +310,29 @@ def background_subtract(mask, data):
     background_data = copy.copy(data)
     background_data[mask == 0] = None
     
-    smooth_background_data = smooth_overnans(background_data, sig = sigma)
+    circ_footprint = make_circular_footprint(radius = 10)
+    smooth_background_data = smooth_overnans(background_data, filter = "median", footprint = circ_footprint)
     
-def smooth_overnans(map, sig = 15):
+    background_subtracted_data = data - smooth_background_data
+    
+    thresholded_masked_data = copy.copy(background_subtracted_data)
+    thresholded_masked_data[background_subtracted_data <= 0] = 0
+    thresholded_masked_data[mask == 0] = 0
+    
+    if plot is True:
+        fig = plt.figure(facecolor = "white")
+        ax1 = fig.add_subplot(311)
+        ax2 = fig.add_subplot(312)
+        ax3 = fig.add_subplot(313)
+        
+        ax1.imshow(data)
+        ax2.imshow(smooth_background_data)
+        ax3.imshow(thresholded_masked_data)
+    
+    return thresholded_masked_data
+    
+    
+def smooth_overnans(map, sig = 15, filter = "median", footprint = None):
 
     """
     Takes map with nans, etc set to 0
@@ -322,8 +344,13 @@ def smooth_overnans(map, sig = 15):
     map_zeroed = copy.copy(map)
     map_zeroed[mask == 0] = 0
     
-    blurred_map = ndimage.gaussian_filter(map_zeroed, sigma=sig)
-    blurred_mask = ndimage.gaussian_filter(mask, sigma=sig)
+    if filter == "gauss":
+        blurred_map = ndimage.gaussian_filter(map_zeroed, sigma=sig)
+        blurred_mask = ndimage.gaussian_filter(mask, sigma=sig)
+        
+    if filter == "median":
+        blurred_map = ndimage.filters.median_filter(map_zeroed, footprint = footprint)
+        blurred_mask = ndimage.filters.median_filter(mask, footprint = footprint)
     
     map = blurred_map / blurred_mask
   
