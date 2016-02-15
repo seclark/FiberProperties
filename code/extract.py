@@ -115,6 +115,9 @@ def test_different_erosion_dilations():
     # Sum relevant thetas
     thetasum_bp = np.zeros((naxis2, naxis1), np.float_)
     thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis = 1)
+    
+    # Only look at subset
+    thetasum_bp = thetasum_bp[:, 4000:]
 
     # Try making this a mask first, then binary erosion/dilation
     masked_thetasum_bp = np.ones(thetasum_bp.shape)
@@ -145,8 +148,20 @@ def test_different_erosion_dilations():
     gbe_then_gbd = binary_dilation(gbe_then_gbd, structure = footprint)
     
     fig = plt.figure(facecolor = "white")
+    ax1 = fig.add_subplot(231)
+    ax2 = fig.add_subplot(232)
+    ax3 = fig.add_subplot(233)
+    ax4 = fig.add_subplot(234)
+    ax5 = fig.add_subplot(235)
+    ax6 = fig.add_subplot(236)
     
+    ims = [cbe_then_gbd, gbd_then_cbe, cbe_then_cbd, cbd_then_cbe, gbd_then_gbe, gbe_then_gbd]
+    axs = [ax1, ax2, ax3, ax4, ax5, ax6]
+    titles = ["Circ Erosion, Gauss Dilation", "Gauss Dilation, Circ Erosion", "Circ Erosion, Circ Dilation", "Circ Dilation, Circ Erosion", "Gauss Dilation, Gauss Erosion", "Gauss Erosion, Gauss Dilation"]
     
+    for i in xrange(len(ims)):
+        axs[i].imshow(ims[i], cmap = "binary")
+        axs[i].set_title(titles[i])
 
 def make_cube():
     
