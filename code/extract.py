@@ -301,35 +301,55 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
     
     return xyv_theta0, hdr, mask
     
-def background_subtract(mask, data, plot = True):
+def background_subtract(mask, data, plotsteps = False, plotresults = True):
     
-    # Create reverse mask
-    rev_mask = np.zeros(mask.shape)
-    rev_mask[mask == 0] = 1
-    
+    # Reverse-mask to get background
     background_data = copy.copy(data)
-    background_data[mask == 0] = None
+    background_data[mask == 1] = None
     
-    circ_footprint = make_circular_footprint(radius = 10)
+    circ_footprint = make_circular_footprint(radius = 60)
     smooth_background_data = smooth_overnans(background_data, filter = "median", footprint = circ_footprint)
     
+    smooth_background_data[np.isnan(smooth_background_data)] = 0
     background_subtracted_data = data - smooth_background_data
     
     thresholded_masked_data = copy.copy(background_subtracted_data)
     thresholded_masked_data[background_subtracted_data <= 0] = 0
     thresholded_masked_data[mask == 0] = 0
     
-    if plot is True:
+    naively_masked_data = copy.copy(data)
+    naively_masked_data[mask == 0] = 0
+    
+    if plotsteps is True:
         fig = plt.figure(facecolor = "white")
-        ax1 = fig.add_subplot(311)
-        ax2 = fig.add_subplot(312)
-        ax3 = fig.add_subplot(313)
+        ax1 = fig.add_subplot(411)
+        ax2 = fig.add_subplot(412)
+        ax3 = fig.add_subplot(413)
+        ax4 = fig.add_subplot(414)
         
         ax1.imshow(data)
+        ax1.set_title("data")
         ax2.imshow(smooth_background_data)
-        ax3.imshow(thresholded_masked_data)
+        ax2.set_title("smooth background data")
+        ax3.imshow(background_subtracted_data)
+        ax3.set_title("background subtracted data")
+        ax4.imshow(thresholded_masked_data)
+        ax4.set_title("thresholded masked data")
+        
+    if plotresults is True:
+        fig = plt.figure(facecolor = "white")
+        ax1 = fig.add_subplot(211)
+        ax2 = fig.add_subplot(212)
+        
+        im1 = ax1.imshow(thresholded_masked_data[:, 4000:], cmap = "binary")
+        ax1.set_title("Background subtracted masked data")    
+        plt.colorbar(im1, ax = ax1)
+        
+        im2 = ax2.imshow(naively_masked_data[:, 4000:], cmap = "binary")
+        ax2.set_title("Naively masked data")    
+        plt.colorbar(im2, ax = ax2)
     
-    return thresholded_masked_data
+    return background_data, smooth_background_data, data, thresholded_masked_data
     
     
 def smooth_overnans(map, sig = 15, filter = "median", footprint = None):
