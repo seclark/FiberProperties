@@ -278,12 +278,11 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
         mask = binary_erosion(masked_thetasum_bp, structure = footprint)
         mask = binary_dilation(mask, structure = footprint)
         
-        # Apply mask to relevant velocity data
-        realdata_vel_slice = SC_241_all[:, :, ch_]
-        realdata_vel_slice[mask == 0] = 0
+        # Apply background subtraction to velocity slice.
+        background_subtracted_data = background_subtract(mask, SC_241_all[:, :, ch_], plotresults = False)
         
         # Place into channel bin
-        xyv_theta0[:, :, ch_i] = realdata_vel_slice
+        xyv_theta0[:, :, ch_i] = background_subtracted_data
         
     #return xyv_theta0
     hdr["CHSTART"] = channels[0]
@@ -302,6 +301,9 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
     return xyv_theta0, hdr, mask
     
 def background_subtract(mask, data, plotsteps = False, plotresults = True):
+    """
+    Background subtraction
+    """
     
     # Reverse-mask to get background
     background_data = copy.copy(data)
@@ -349,7 +351,7 @@ def background_subtract(mask, data, plotsteps = False, plotresults = True):
         ax2.set_title("Naively masked data")    
         plt.colorbar(im2, ax = ax2)
     
-    return background_data, smooth_background_data, data, thresholded_masked_data
+    return thresholded_masked_data
     
     
 def smooth_overnans(map, sig = 15, filter = "median", footprint = None):
