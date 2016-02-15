@@ -238,7 +238,10 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
     
     # Create a circular footprint for use in erosion / dilation.
     if gaussian_footprint is True:
-        footprint = make_gaussian_footprint(theta_0 = -theta_0, wlen = 5)
+        footprint = make_gaussian_footprint(theta_0 = theta_0, wlen = 5)
+        
+        # Mathematical definition of kernel flips y-axis
+        footprint = footprint[::-1, :]
     else:
         footprint = make_circular_footprint(radius = 3)
         
@@ -304,6 +307,8 @@ def background_subtract(mask, data):
     
     background_data = copy.copy(data)
     background_data[mask == 0] = None
+    
+    smooth_background_data = smooth_overnans(background_data, sig = sigma)
     
 def smooth_overnans(map, sig = 15):
 
