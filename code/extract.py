@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 from astropy.io import fits
+from astropy.wcs import WCS
 from scipy.ndimage.morphology import grey_erosion, grey_dilation, binary_erosion, binary_dilation
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
@@ -72,6 +73,81 @@ def coadd_by_angle():
         data, data_fn = get_data(chan, verbose = False)
         theta_separated_backprojection += bin_data_by_theta(data_fn, nbins = nthetabins)
         
+def radecs_to_xy(w, ras, decs):
+    
+    #Transformation
+    radec = zip(ras, decs)
+    xy = w.wcs_world2pix(radec, 1)
+    
+    xs = xy[:,0]
+    ys = xy[:,1]
+    
+    return xs, ys
+    
+def xys_to_radec(w, xs, ys):
+    
+    #Transformation
+    xy = zip(xs, ys)
+    radec = w.wcs_pix2world(xy, 1)
+    
+    ras = radec[:,0]
+    decs = radec[:,1]
+    
+    return ras, decs
+
+def project_cubes_into_region():
+    
+    to_region_fn = "/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits"
+    w = WCS(to_region_fn)
+    
+    allsky_fn = "/Volumes/DataDavy/GALFA/DR2/FullSkyNarrow/GALFA_HI_W_S1011_V-009.2kms.fits"
+    allsky_w = WCS(allsky_fn)
+    
+    mnvals = np.indices(to_region_data.shape)
+    yvals = mnvals[0].flatten() # row indices
+    xvals = mnvals[1].flatten() # column indices   
+    
+def test_different_erosion_dilations():
+
+    data, data_fn = get_data(20, verbose = False)
+    ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
+    
+    # Sum relevant thetas
+    thetasum_bp = np.zeros((naxis2, naxis1), np.float_)
+    thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis = 1)
+
+    # Try making this a mask first, then binary erosion/dilation
+    masked_thetasum_bp = np.ones(thetasum_bp.shape)
+    masked_thetasum_bp[thetasum_bp <= 0] = 0
+    
+    # circular binary erosion then gaussian binary dilation
+    cbe_then_gbd = binary_erosion(masked_thetasum_bp, structure = circular_footprint)
+    cbe_then_gbd = binary_dilation(cbe_then_gbd, structure = footprint)
+    
+    # gaussian binary dilation then circular binary erosion
+    gbd_then_cbe = binary_dilation(masked_thetasum_bp, structure = footprint)
+    gbd_then_cbe = binary_erosion(bd_then_be, structure = circular_footprint)
+    
+    # circular binary erosion then circular binary dilation
+    cbe_then_cbd = binary_dilation(masked_thetasum_bp, structure = circular_footprint)
+    cbe_then_cbd = binary_erosion(cbe_then_cbd, structure = circular_footprint)
+    
+    # circular binary dilation then circular binary erosion
+    cbd_then_cbe = binary_erosion(masked_thetasum_bp, structure = circular_footprint)
+    cbd_then_cbe = binary_dilation(cbd_then_cbe, structure = circular_footprint)
+    
+    # gaussian binary dilation then gaussian binary erosion
+    gbd_then_gbe = binary_dilation(masked_thetasum_bp, structure = footprint)
+    gbd_then_gbe = binary_erosion(gbd_then_gbe, structure = footprint)
+    
+    # gaussian binary erosion then gaussian binary dilation
+    gbe_then_gbd = binary_erosion(masked_thetasum_bp, structure = footprint)
+    gbe_then_gbd = binary_dilation(gbe_then_gbd, structure = footprint)
+    
+    fig = plt.figure(facecolor = "white")
+    
+    
+
 def make_cube():
     
     # Let's choose center angle based on average angle for high latitude, fiber-y region
