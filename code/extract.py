@@ -238,11 +238,11 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
     
     # Create a circular footprint for use in erosion / dilation.
     if gaussian_footprint is True:
-        footprint = make_gaussian_footprint(theta_0 = -theta_0, wlen = 7)
+        footprint = make_gaussian_footprint(theta_0 = -theta_0, wlen = 5)
     else:
         footprint = make_circular_footprint(radius = 3)
         
-    circular_footprint = make_circular_footprint(radius = 2)
+    #circular_footprint = make_circular_footprint(radius = 2)
     
     # Initialize (x, y, v) cube
     xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
@@ -270,7 +270,7 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
         # Try making this a mask first, then binary erosion/dilation
         masked_thetasum_bp = np.ones(thetasum_bp.shape)
         masked_thetasum_bp[thetasum_bp <= 0] = 0
-        mask = binary_erosion(masked_thetasum_bp, structure = circular_footprint)
+        mask = binary_erosion(masked_thetasum_bp, structure = footprint)
         mask = binary_dilation(mask, structure = footprint)
         
         # Apply mask to relevant velocity data
@@ -295,6 +295,34 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
     #fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+"_new_naxis3.fits", xyv_theta0, hdr)
     
     return xyv_theta0, hdr
+    
+def background_subtract(mask, data):
+    
+    # Create reverse mask
+    rev_mask = np.zeros(mask.shape)
+    rev_mask[mask == 0] = 1
+    
+    background_data = copy.copy(data)
+    background_data[mask == 0] = None
+    
+def smooth_overnans(map, sig = 15):
+
+    """
+    Takes map with nans, etc set to 0
+    """
+    
+    mask = np.ones(map.shape, np.float_)
+    mask[np.isnan(map)] = 0
+    
+    map_zeroed = copy.copy(map)
+    map_zeroed[mask == 0] = 0
+    
+    blurred_map = ndimage.gaussian_filter(map_zeroed, sigma=sig)
+    blurred_mask = ndimage.gaussian_filter(mask, sigma=sig)
+    
+    map = blurred_map / blurred_mask
+  
+    return map
 
 def erode_data(data, footprint = None, structure = None):
     
