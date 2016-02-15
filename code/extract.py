@@ -107,7 +107,17 @@ def project_cubes_into_region():
     yvals = mnvals[0].flatten() # row indices
     xvals = mnvals[1].flatten() # column indices   
     
-def test_different_erosion_dilations():
+def test_different_erosion_dilations(wlen = 75, theta_0 = 72, theta_bandwidth = 10):
+
+    # Get thetas for given window length
+    thets = RHT_tools.get_thets(wlen)
+    
+    # Get index of theta bin that is closest to theta_0
+    indx_0 = (np.abs(thets - np.radians(theta_0))).argmin()
+    
+    # Get index of beginning and ending thetas that are approximately theta_bandwidth centered on theta_0
+    indx_start = (np.abs(thets - (thets[indx_0] - np.radians(theta_bandwidth/2.0)))).argmin()
+    indx_stop = (np.abs(thets - (thets[indx_0] + np.radians(theta_bandwidth/2.0)))).argmin()
 
     data, data_fn = get_data(20, verbose = False)
     ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
@@ -123,13 +133,18 @@ def test_different_erosion_dilations():
     masked_thetasum_bp = np.ones(thetasum_bp.shape)
     masked_thetasum_bp[thetasum_bp <= 0] = 0
     
+    gauss_footprint_len = 7
+    circ_footprint_rad = 2
+    footprint = make_gaussian_footprint(theta_0 = -theta_0, wlen = gauss_footprint_len)
+    circular_footprint = make_circular_footprint(radius = circ_footprint_rad)
+    
     # circular binary erosion then gaussian binary dilation
     cbe_then_gbd = binary_erosion(masked_thetasum_bp, structure = circular_footprint)
     cbe_then_gbd = binary_dilation(cbe_then_gbd, structure = footprint)
     
     # gaussian binary dilation then circular binary erosion
     gbd_then_cbe = binary_dilation(masked_thetasum_bp, structure = footprint)
-    gbd_then_cbe = binary_erosion(bd_then_be, structure = circular_footprint)
+    gbd_then_cbe = binary_erosion(gbd_then_cbe, structure = circular_footprint)
     
     # circular binary erosion then circular binary dilation
     cbe_then_cbd = binary_dilation(masked_thetasum_bp, structure = circular_footprint)
