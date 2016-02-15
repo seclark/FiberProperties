@@ -135,7 +135,7 @@ def test_different_erosion_dilations(wlen = 75, theta_0 = 72, theta_bandwidth = 
     masked_thetasum_bp = np.ones(thetasum_bp.shape)
     masked_thetasum_bp[thetasum_bp <= 0] = 0
     
-    gauss_footprint_len = 7
+    gauss_footprint_len = 5
     circ_footprint_rad = 2
     footprint = make_gaussian_footprint(theta_0 = -theta_0, wlen = gauss_footprint_len)
     circular_footprint = make_circular_footprint(radius = circ_footprint_rad)
@@ -175,6 +175,8 @@ def test_different_erosion_dilations(wlen = 75, theta_0 = 72, theta_bandwidth = 
     ims = [cbe_then_gbd, gbd_then_cbe, cbe_then_cbd, cbd_then_cbe, gbd_then_gbe, gbe_then_gbd]
     axs = [ax1, ax2, ax3, ax4, ax5, ax6]
     titles = ["Circ Erosion, Gauss Dilation", "Gauss Dilation, Circ Erosion", "Circ Erosion, Circ Dilation", "Circ Dilation, Circ Erosion", "Gauss Dilation, Gauss Erosion", "Gauss Erosion, Gauss Dilation"]
+    
+    plt.suptitle("Binary Erosion and Dilation, Circular radius = {}, Gaussian Kernel Length = {}".format(circ_footprint_rad, gauss_footprint_len))
     
     for i in xrange(len(ims)):
         axs[i].imshow(ims[i], cmap = "binary")
