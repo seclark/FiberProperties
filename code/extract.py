@@ -5,6 +5,7 @@ from astropy.wcs import WCS
 from scipy.ndimage.morphology import grey_erosion, grey_dilation, binary_erosion, binary_dilation
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
+from reproject import reproject_interp
 
 # RHT helper code
 import sys 
@@ -95,17 +96,18 @@ def xys_to_radec(w, xs, ys):
     
     return ras, decs
 
-def project_cubes_into_region():
+def project_data_into_region():
     
-    to_region_fn = "/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits"
-    w = WCS(to_region_fn)
+    to_region_fn = "/Volumes/DataDavy/GALFA/SC_241/LAB_corrected_coldens.fits"
+    to_region_hdr = fits.getheader(to_region_fn)
     
     allsky_fn = "/Volumes/DataDavy/GALFA/DR2/FullSkyNarrow/GALFA_HI_W_S1011_V-009.2kms.fits"
-    allsky_w = WCS(allsky_fn)
+    allsky_hdr = fits.getheader(allsky_fn)
+    allsky_data = fits.getdata(allsky_fn)
+     
+    new_image, footprint = reproject_interp((allsky_data, allsky_hdr), to_region_hdr) 
     
-    mnvals = np.indices(to_region_data.shape)
-    yvals = mnvals[0].flatten() # row indices
-    xvals = mnvals[1].flatten() # column indices   
+    return new_image
     
 def test_different_erosion_dilations(wlen = 75, theta_0 = 72, theta_bandwidth = 10):
 
