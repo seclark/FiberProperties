@@ -199,7 +199,7 @@ def make_cube():
     
     return xyv_theta0, hdr
 
-def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, gaussian_footprint = True):
+def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, smooth_radius = 60, gaussian_footprint = True, gauss_footprint_len = 5, binary_erosion = True):
     """
     Creates cube of Backprojection(x, y, v | theta_0)
     where dimensions are x, y, and velocity
@@ -240,7 +240,7 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
     
     # Create a circular footprint for use in erosion / dilation.
     if gaussian_footprint is True:
-        footprint = make_gaussian_footprint(theta_0 = theta_0, wlen = 5)
+        footprint = make_gaussian_footprint(theta_0 = theta_0, wlen = gauss_footprint_len)
         
         # Mathematical definition of kernel flips y-axis
         footprint = footprint[::-1, :]
@@ -261,25 +261,27 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
         thetasum_bp = np.zeros((naxis2, naxis1), np.float_)
         thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis = 1)
         
-        # Erode and dilate
-        # Circular erosion
-        #eroded_thetasum_bp = erode_data(thetasum_bp, footprint = circular_footprint)
+        if binary_erosion is False:
+            # Erode and dilate
+            # Circular erosion
+            eroded_thetasum_bp = erode_data(thetasum_bp, footprint = circular_footprint)
         
-        # Gaussian dilation
-        #dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint, structure = footprint)
+            # Gaussian dilation
+            dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint, structure = footprint)
         
-        # Turn into mask
-        #mask = np.ones(dilated_thetasum_bp.shape)
-        #mask[dilated_thetasum_bp <= 0] = 0
+            # Turn into mask
+            mask = np.ones(dilated_thetasum_bp.shape)
+            mask[dilated_thetasum_bp <= 0] = 0
         
-        # Try making this a mask first, then binary erosion/dilation
-        masked_thetasum_bp = np.ones(thetasum_bp.shape)
-        masked_thetasum_bp[thetasum_bp <= 0] = 0
-        mask = binary_erosion(masked_thetasum_bp, structure = footprint)
-        mask = binary_dilation(mask, structure = footprint)
+        else:
+            # Try making this a mask first, then binary erosion/dilation
+            masked_thetasum_bp = np.ones(thetasum_bp.shape)
+            masked_thetasum_bp[thetasum_bp <= 0] = 0
+            mask = binary_erosion(masked_thetasum_bp, structure = footprint)
+            mask = binary_dilation(mask, structure = footprint)
         
         # Apply background subtraction to velocity slice.
-        background_subtracted_data = background_subtract(mask, SC_241_all[:, :, ch_], plotresults = False)
+        background_subtracted_data = background_subtract(mask, SC_241_all[:, :, ch_], smooth_radius = smooth_radius, plotresults = False)
         
         # Place into channel bin
         xyv_theta0[:, :, ch_i] = background_subtracted_data
@@ -300,7 +302,7 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, ga
     
     return xyv_theta0, hdr, mask
     
-def background_subtract(mask, data, plotsteps = False, plotresults = True):
+def background_subtract(mask, data, smooth_radius = 60, plotsteps = False, plotresults = True):
     """
     Background subtraction
     """
@@ -309,7 +311,7 @@ def background_subtract(mask, data, plotsteps = False, plotresults = True):
     background_data = copy.copy(data)
     background_data[mask == 1] = None
     
-    circ_footprint = make_circular_footprint(radius = 60)
+    circ_footprint = make_circular_footprint(radius = smooth_radius)
     smooth_background_data = smooth_overnans(background_data, filter = "median", footprint = circ_footprint)
     
     smooth_background_data[np.isnan(smooth_background_data)] = 0
@@ -496,7 +498,30 @@ def erode_dilate_example(nbins = 10, footprint_radius = 3):
 
     #plt.savefig("marytest.png")
     
-
+# This is where the stuff that gets executed when you run "python extract.py" goes.
+if __name__ == "__main__":
+    
+    # Center theta (degrees)
+    theta_0 = 72
+    
+    # Width of theta window around theta_0 (degrees)
+    theta_bandwidth = 10
+    
+    # RHT window length (pixels)
+    wlen = 75
+    
+    # Radius of median filter for background subtraction (pixels)
+    smooth_radius = 60
+    
+    # If True, erode and dilate data using gaussian footprint. Otherwise, circular.
+    gaussian_footprint = True
+    
+    # Length of one side of gaussian footprint
+    gauss_footprint_len = 5
+    
+    # If True, binary erosion/dilation. If False, grey erosion/dilation.
+    binary_erosion = True
+    
 
 
     
