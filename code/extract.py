@@ -199,7 +199,7 @@ def make_cube():
     
     return xyv_theta0, hdr
 
-def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, smooth_radius = 60, gaussian_footprint = True, gauss_footprint_len = 5, binary_erosion = True):
+def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, smooth_radius = 60, gaussian_footprint = True, gauss_footprint_len = 5, circular_footprint_radius = 3, binary_erosion = True):
     """
     Creates cube of Backprojection(x, y, v | theta_0)
     where dimensions are x, y, and velocity
@@ -245,9 +245,7 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
         # Mathematical definition of kernel flips y-axis
         footprint = footprint[::-1, :]
     else:
-        footprint = make_circular_footprint(radius = 3)
-        
-    #circular_footprint = make_circular_footprint(radius = 2)
+        footprint = make_circular_footprint(radius = circular_footprint_radius)
     
     # Initialize (x, y, v) cube
     xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
@@ -263,10 +261,7 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
         
         if binary_erosion is False:
             # Erode and dilate
-            # Circular erosion
-            eroded_thetasum_bp = erode_data(thetasum_bp, footprint = circular_footprint)
-        
-            # Gaussian dilation
+            eroded_thetasum_bp = erode_data(thetasum_bp, footprint = footprint, structure = footprint)
             dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint, structure = footprint)
         
             # Turn into mask
@@ -519,9 +514,16 @@ if __name__ == "__main__":
     # Length of one side of gaussian footprint
     gauss_footprint_len = 5
     
+    # Radius of circular footprint
+    circular_footprint_radius = 3
+    
     # If True, binary erosion/dilation. If False, grey erosion/dilation.
     binary_erosion = True
     
+    single_theta_velocity_cube(theta_0 = theta_0, theta_bandwidth = theta_bandwidth, wlen = wlen,
+                               smooth_radius = smooth_radius, gaussian_footprint = gaussian_footprint, 
+                               gauss_footprint_len = gauss_footprint_len, circular_footprint_radius = circular_footprint_radius, 
+                               binary_erosion = binary_erosion)
 
 
     
