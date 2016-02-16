@@ -199,7 +199,7 @@ def make_cube():
     
     return xyv_theta0, hdr
 
-def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, smooth_radius = 60, gaussian_footprint = True, gauss_footprint_len = 5, circular_footprint_radius = 3, binary_erosion = True):
+def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, smooth_radius = 60, gaussian_footprint = True, gauss_footprint_len = 5, circular_footprint_radius = 3, binary_erode_dilate = True):
     """
     Creates cube of Backprojection(x, y, v | theta_0)
     where dimensions are x, y, and velocity
@@ -259,7 +259,7 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
         thetasum_bp = np.zeros((naxis2, naxis1), np.float_)
         thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis = 1)
         
-        if binary_erosion is False:
+        if binary_erode_dilate is False:
             # Erode and dilate
             eroded_thetasum_bp = erode_data(thetasum_bp, footprint = footprint, structure = footprint)
             dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint, structure = footprint)
@@ -518,12 +518,17 @@ if __name__ == "__main__":
     circular_footprint_radius = 3
     
     # If True, binary erosion/dilation. If False, grey erosion/dilation.
-    binary_erosion = True
+    binary_erode_dilate = True
     
-    single_theta_velocity_cube(theta_0 = theta_0, theta_bandwidth = theta_bandwidth, wlen = wlen,
+    
+    # Run code
+    xyv_theta0, hdr, mask = single_theta_velocity_cube(theta_0 = theta_0, theta_bandwidth = theta_bandwidth, wlen = wlen,
                                smooth_radius = smooth_radius, gaussian_footprint = gaussian_footprint, 
                                gauss_footprint_len = gauss_footprint_len, circular_footprint_radius = circular_footprint_radius, 
-                               binary_erosion = binary_erosion)
+                               binary_erode_dilate = binary_erode_dilate)
 
-
+    # Save output cube to fits file
+    xyv_theta0_fn = "xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+".fits"
+    fits.writeto(xyv_theta0_fn, xyv_theta0, hdr)
+    
     
