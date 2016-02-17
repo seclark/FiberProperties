@@ -144,9 +144,15 @@ def make_projected_cube():
         
         projected_narrow_data[:, :, i] = project_data_into_region(allsky_fns[0], to_region = "SC_241")
         
+    # Whole cube velocities from Yong
+    vels_wide = np.loadtxt("GALFAHI_VLSR_W.txt")
+        
     hdr = copy.copy(to_region_hdr)
     hdr["NAXIS3"] = nvels
-    hdr["CRVAL3"] = -17300.0 # starting velocity in m/s
+    hdr["CRVAL3"] = vels_wide[start_num]*1000 # starting velocity in m/s
+    hdr["CRDELT3"] = (vels_wide[1] - vels_wide[0])*1000 # velocity delta in m/s
+    
+    fits.writeto("GALFA_HI_W_projected_SC_241.fits", projected_narrow_data, hdr)
             
     return projected_narrow_data
     
