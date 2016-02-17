@@ -98,18 +98,57 @@ def xys_to_radec(w, xs, ys):
     
     return ras, decs
 
-def project_data_into_region():
+def project_data_into_region(from_data_fn, to_region = "SC_241"):
     
-    to_region_fn = "/Volumes/DataDavy/GALFA/SC_241/LAB_corrected_coldens.fits"
-    to_region_hdr = fits.getheader(to_region_fn)
+    if to_region == "SC_241":
+        to_region_fn = "/Volumes/DataDavy/GALFA/SC_241/LAB_corrected_coldens.fits"
+        to_region_hdr = fits.getheader(to_region_fn)
     
-    allsky_fn = "/Volumes/DataDavy/GALFA/DR2/FullSkyNarrow/GALFA_HI_W_S1011_V-009.2kms.fits"
-    allsky_hdr = fits.getheader(allsky_fn)
-    allsky_data = fits.getdata(allsky_fn)
+    from_data_hdr = fits.getheader(from_data_fn)
+    from_data_data = fits.getdata(from_data_fn)
      
-    new_image, footprint = reproject_interp((allsky_data, allsky_hdr), to_region_hdr) 
+    new_image, footprint = reproject_interp((from_data_data, from_data_hdr), to_region_hdr) 
     
     return new_image
+    
+def get_velocity_from_fits(fits_fn, kms = True):
+    """
+    Returns velocities of fits cube slices (assumes they are in NAXIS3)
+    """
+
+    hdr = fits.getheader(fits_fn)
+    
+    vels = np.zeros(hdr["NAXIS3"])
+    
+    for i in xrange(len(vels)):
+        vels[i] = hdr["CRVAL3"] + (i)*hdr["CDELT3"]
+        
+    if kms is True:
+        vels = vels/1000.0
+        
+    return vels
+    
+def make_projected_cube():
+    import glob
+
+    #1000 - 1047 will be velocities -017.3kms to +017.3kms
+    start_num = 1000
+    nvels = 48
+    to_region_hdr = fits.getheader("/Volumes/DataDavy/GALFA/SC_241/LAB_corrected_coldens.fits")
+    projected_narrow_data = np.zeros((to_region_hdr["NAXIS2"], to_region_hdr["NAXIS1"], nvels), np.float_)
+    
+    for i in xrange(nvels):
+        num = start_num + i
+        print("Analyzing channel number {}".format(num))
+        allsky_fns = glob.glob("/Volumes/DataDavy/GALFA/DR2/FullSkyNarrow/GALFA_HI_W_S"+str(num)+"_*.fits")
+        
+        projected_narrow_data[:, :, i] = project_data_into_region(allsky_fns[0], to_region = "SC_241")
+        
+    hdr = copy.copy(to_region_hdr)
+    hdr["NAXIS3"] = nvels
+    hdr["CRVAL3"] = -17300.0 # starting velocity in m/s
+            
+    return projected_narrow_data
     
 def test_different_erosion_dilations(wlen = 75, theta_0 = 72, theta_bandwidth = 10):
 
@@ -188,7 +227,7 @@ def make_cube():
     
     # Let's choose center angle based on average angle for high latitude, fiber-y region
     allQs = np.load("/Volumes/DataDavy/GALFA/SC_241/thetarht_maps/Q_RHT_SC_241_best_ch16_to_24_w75_s15_t70_bwrm_galfapixcorr.npy")
-    allUs = np.load("//Volumes/DataDavy/GALFA/SC_241/thetarht_maps/U_RHT_SC_241_best_ch16_to_24_w75_s15_t70_bwrm_galfapixcorr.npy")
+    allUs = np.load("/Volumes/DataDavy/GALFA/SC_241/thetarht_maps/U_RHT_SC_241_best_ch16_to_24_w75_s15_t70_bwrm_galfapixcorr.npy")
 
     mean_angle = np.degrees(np.mod(0.5*np.arctan2(np.nanmean(allUs[:, 4000:]), np.nanmean(allQs[:, 4000:])), np.pi))
 
@@ -213,8 +252,9 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
     """
     
     # Read in all SC_241 *original* data
-    SC_241_all = fits.getdata("/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits")
-    hdr = fits.getheader("/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits")
+    SC_241_original_fn = "/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits"
+    SC_241_all = fits.getdata(SC_241_original_fn)
+    hdr = fits.getheader(SC_241_original_fn)
     
     # Velocity data should be third axis
     SC_241_all = SC_241_all.swapaxes(0, 2)
@@ -494,6 +534,7 @@ def erode_dilate_example(nbins = 10, footprint_radius = 3):
     #plt.savefig("marytest.png")
     
 # This is where the stuff that gets executed when you run "python extract.py" goes.
+"""
 if __name__ == "__main__":
     
     # Center theta (degrees)
@@ -530,5 +571,5 @@ if __name__ == "__main__":
     # Save output cube to fits file
     xyv_theta0_fn = "xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+".fits"
     fits.writeto(xyv_theta0_fn, xyv_theta0, hdr)
-    
-    
+"""
+
