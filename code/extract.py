@@ -152,6 +152,10 @@ def make_projected_cube():
     hdr["CRVAL3"] = vels_wide[start_num]*1000 # starting velocity in m/s
     hdr["CRDELT3"] = (vels_wide[1] - vels_wide[0])*1000 # velocity delta in m/s
     
+    # Deal with third axis ordering
+    projected_narrow_data = projected_narrow_data.swapaxes(0, 2)
+    projected_narrow_data = projected_narrow_data.swapaxes(0, 1)
+    
     fits.writeto("GALFA_HI_W_projected_SC_241.fits", projected_narrow_data, hdr)
             
     return projected_narrow_data
