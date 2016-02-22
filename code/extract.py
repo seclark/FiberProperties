@@ -148,15 +148,16 @@ def make_projected_cube():
     vels_wide = np.loadtxt("GALFAHI_VLSR_W.txt")
         
     hdr = copy.copy(to_region_hdr)
-    hdr["NAXIS3"] = nvels
+    hdr["NAXIS"] = 3
+    hdr.insert(5, ("NAXIS3", nvels)) # Insert NAXIS3 at correct location
     hdr["CRVAL3"] = vels_wide[start_num]*1000 # starting velocity in m/s
-    hdr["CRDELT3"] = (vels_wide[1] - vels_wide[0])*1000 # velocity delta in m/s
+    hdr["CDELT3"] = (vels_wide[1] - vels_wide[0])*1000 # velocity delta in m/s
     
     # Deal with third axis ordering
     projected_narrow_data = projected_narrow_data.swapaxes(0, 2)
     projected_narrow_data = projected_narrow_data.swapaxes(0, 1)
     
-    fits.writeto("GALFA_HI_W_projected_SC_241.fits", projected_narrow_data, hdr)
+    fits.writeto("GALFA_HI_W_projected_SC_241_3.fits", projected_narrow_data, hdr)
             
     return projected_narrow_data
     
