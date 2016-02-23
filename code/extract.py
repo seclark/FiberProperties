@@ -140,7 +140,7 @@ def make_projected_cube():
     for i in xrange(nvels):
         num = start_num + i
         print("Analyzing channel number {}".format(num))
-        allsky_fns = glob.glob("/Volumes/DataDavy/GALFA/DR2/FullSkyNarrow/GALFA_HI_W_S"+str(num)+"_*.fits")
+        allsky_fns = glob.glob("/Volumes/DataDavy/GALFA/DR2/FullSkyWide/GALFA_HI_W_S"+str(num)+"_*.fits")
         
         projected_narrow_data[:, :, i] = project_data_into_region(allsky_fns[0], to_region = "SC_241")
         
@@ -155,9 +155,12 @@ def make_projected_cube():
     
     # Deal with third axis ordering
     projected_narrow_data = projected_narrow_data.swapaxes(0, 2)
-    projected_narrow_data = projected_narrow_data.swapaxes(0, 1)
+    projected_narrow_data = projected_narrow_data.swapaxes(1, 2)
+    #projected_narrow_data = projected_narrow_data.swapaxes(0, 1) #(1, 2)
     
-    fits.writeto("GALFA_HI_W_projected_SC_241_3.fits", projected_narrow_data, hdr)
+    print(projected_narrow_data.shape)
+    
+    fits.writeto("GALFA_HI_W_projected_SC_241_5.fits", projected_narrow_data, hdr)
             
     return projected_narrow_data
     
