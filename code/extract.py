@@ -139,9 +139,7 @@ def find_all_closest_velocities(usevels, comparevels):
 def closest_velocities(usevels, compare_vel):
     from heapq import nsmallest
     
-    for i in xrange(len(comparevels)):
-        if i >= 16 and i <= 24:
-            closestvels = nsmallest(4, usevels, key=lambda x: abs(x-compare_vel))
+    closestvels = nsmallest(4, usevels, key=lambda x: abs(x-compare_vel))
     
     return closestvels
     
@@ -328,7 +326,7 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
         footprint = make_circular_footprint(radius = circular_footprint_radius)
     
     # Initialize (x, y, v) cube
-    xyv_theta0 = np.zeros((naxis2, naxis1, nchannels), np.float_)
+    xyv_theta0 = np.zeros((naxis2, naxis1, 1), np.float_)
     
     for ch_i, ch_ in enumerate(channels):
         # Grab channel-specific RHT data
@@ -363,19 +361,23 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
     
         # Apply background subtraction to velocity slice.
         for cv in closestvels:
-            background_subtracted_data = background_subtract(mask, SC_241_all[:, :, ch_], smooth_radius = smooth_radius, plotresults = False)
-        
-        
-        # Place into channel bin
-        xyv_theta0[:, :, ch_i] = background_subtracted_data
+            wv_indx = list(wide_vels).index(cv)
+            background_subtracted_data = background_subtract(mask, SC_241_wide[:, :, wv_indx], smooth_radius = smooth_radius, plotresults = False)
+                
+            # Place into channel bin
+            #xyv_theta0[:, :, ch_i] = background_subtracted_data
+            
+            # Append onto data cube
+            np.append(xyv_theta0, background_subtracted_data, axis = 2)
         
     #return xyv_theta0
-    hdr["CHSTART"] = channels[0]
-    hdr["CHSTOP"] = channels[-1]
-    hdr["NAXIS3"] = len(channels)
+    #hdr["CHSTART"] = channels[0]
+    #hdr["CHSTOP"] = channels[-1]
+    hdr["NAXIS3"] = len(channels)*4
     hdr["THETA0"] = theta_0
     hdr["THETAB"] = theta_bandwidth
-    hdr["CRPIX3"] = hdr["CRPIX3"] - channels[0]
+    #hdr["CRPIX3"] = hdr["CRPIX3"] - channels[0]
+    hdr["CRVAL3"] = np.nanmin(closest_velocities(wide_vels, mask_vels[channels[0]]))
     
     # Deal with python fits axis ordering
     xyv_theta0 = xyv_theta0.swapaxes(0, 2)
