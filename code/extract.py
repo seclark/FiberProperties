@@ -128,6 +128,24 @@ def get_velocity_from_fits(fits_fn, kms = True):
         
     return vels
     
+def find_all_closest_velocities(usevels, comparevels):
+    from heapq import nsmallest
+    
+    for i in xrange(len(comparevels)):
+        if i >= 16 and i <= 24:
+            closestvels = nsmallest(4, usevels, key=lambda x: abs(x-comparevels[i]))
+            print(np.sort(closestvels))
+
+def closest_velocities(usevels, compare_vel):
+    from heapq import nsmallest
+    
+    for i in xrange(len(comparevels)):
+        if i >= 16 and i <= 24:
+            closestvels = nsmallest(4, usevels, key=lambda x: abs(x-compare_vel))
+    
+    return closestvels
+    
+    
 def make_projected_cube():
     import glob
 
@@ -160,7 +178,7 @@ def make_projected_cube():
     
     print(projected_narrow_data.shape)
     
-    fits.writeto("GALFA_HI_W_projected_SC_241_5.fits", projected_narrow_data, hdr)
+    fits.writeto("/Volumes/DataDavy/GALFA/DR2/SC_241_Wide/GALFA_HI_W_projected_SC_241.fits", projected_narrow_data, hdr)
             
     return projected_narrow_data
     
@@ -275,8 +293,16 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
     SC_241_all = SC_241_all.swapaxes(0, 1)
     naxis2, naxis1, nchannels_total = SC_241_all.shape
     
+    # Get Wide DR2 data in SC_241 region
+    SC_241_wide_fn = "/Volumes/DataDavy/GALFA/DR2/SC_241_Wide/GALFA_HI_W_projected_SC_241.fits"
+    SC_241_wide = fits.getdata(SC_241_wide_fn)
+    
     # Get thetas for given window length
     thets = RHT_tools.get_thets(wlen)
+    
+    # Get wide and mask velocities for application of mask to final data
+    wide_vels = get_velocity_from_fits(SC_241_wide_fn)
+    mask_vels = get_velocity_from_fits(SC_241_original_fn)
     
     # Get index of theta bin that is closest to theta_0
     indx_0 = (np.abs(thets - np.radians(theta_0))).argmin()
@@ -330,7 +356,15 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
             mask = binary_dilation(mask, structure = footprint)
         
         # Apply background subtraction to velocity slice.
-        background_subtracted_data = background_subtract(mask, SC_241_all[:, :, ch_], smooth_radius = smooth_radius, plotresults = False)
+        #background_subtracted_data = background_subtract(mask, SC_241_all[:, :, ch_], smooth_radius = smooth_radius, plotresults = False)
+        
+        # Get appropriate velocity slices for background subtraction
+        closestvels = closest_velocities(wide_vels, mask_vels[ch_])
+    
+        # Apply background subtraction to velocity slice.
+        for cv in closestvels:
+            background_subtracted_data = background_subtract(mask, SC_241_all[:, :, ch_], smooth_radius = smooth_radius, plotresults = False)
+        
         
         # Place into channel bin
         xyv_theta0[:, :, ch_i] = background_subtracted_data
