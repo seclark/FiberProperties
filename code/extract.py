@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 from reproject import reproject_interp
 import copy
+import time
 
 # RHT helper code
 import sys 
@@ -583,8 +584,137 @@ def erode_dilate_example(nbins = 10, footprint_radius = 3):
 
     #plt.savefig("marytest.png")
     
+def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, smooth_radius = 60, gaussian_footprint = True, gauss_footprint_len = 5, circular_footprint_radius = 3, binary_erode_dilate = True, hilatonly = True):
+    """
+    Creates cube of Backprojection(x, y, v | theta_0)
+    where dimensions are x, y, and velocity
+    and each velocity slice contains the backprojection for that velocity, at a single theta.
+
+    theta_0         :: approximate center theta value (in degrees). 
+                       Actual value will be closest bin in xyt data.
+    theta_bandwidth :: approximate width of theta range desired (in degrees)
+    wlen            :: RHT window length
+
+    """
+
+    # Read in all SC_241 *original* data
+    SC_241_original_fn = "/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits"
+    SC_241_all = fits.getdata(SC_241_original_fn)
+    hdr = fits.getheader(SC_241_original_fn)
+
+    # Velocity data should be third axis
+    SC_241_all = SC_241_all.swapaxes(0, 2)
+    SC_241_all = SC_241_all.swapaxes(0, 1)
+    naxis2, naxis1, nchannels_total = SC_241_all.shape
+
+    # Get Wide DR2 data in SC_241 region
+    SC_241_wide_fn = "/Volumes/DataDavy/GALFA/DR2/SC_241_Wide/GALFA_HI_W_projected_SC_241.fits"
+    SC_241_wide = fits.getdata(SC_241_wide_fn)
+
+    # This is pretty slow with the full SC_241 region. I'm going to chop off the 3000 pixels at the lowest latitude.
+    # Change header accordingly.
+    if hilatonly is True:
+        SC_241_all = SC_241_all[:, 3000:, :]
+        SC_241_wide = SC_241_wide[:, :, 3000:]
+        hdr["CRPIX1"] = hdr["CRPIX1"] - 3000
+        hdr["NAXIS1"] = hdr["NAXIS1"] - 3000
+        naxis1 = naxis1 - 3000
+
+    # Get thetas for given window length
+    thets = RHT_tools.get_thets(wlen)
+
+    # Get wide and mask velocities for application of mask to final data
+    wide_vels = get_velocity_from_fits(SC_241_wide_fn)
+    mask_vels = get_velocity_from_fits(SC_241_original_fn)
+
+    # Get index of theta bin that is closest to theta_0
+    indx_0 = (np.abs(thets - np.radians(theta_0))).argmin()
+
+    # Get index of beginning and ending thetas that are approximately theta_bandwidth centered on theta_0
+    indx_start = (np.abs(thets - (thets[indx_0] - np.radians(theta_bandwidth/2.0)))).argmin()
+    indx_stop = (np.abs(thets - (thets[indx_0] + np.radians(theta_bandwidth/2.0)))).argmin()
+
+    print("Actual theta range will be {} to {} degrees".format(np.degrees(thets[indx_start]), np.degrees(thets[indx_stop])))
+    print("Theta indices will be {} to {}".format(indx_start, indx_stop))
+
+    # Define velocity channels
+    channels = [16, 17, 18, 19, 20, 21, 22, 23, 24]
+    nchannels = len(channels)
+
+    # Create a circular footprint for use in erosion / dilation.
+    if gaussian_footprint is True:
+        footprint = make_gaussian_footprint(theta_0 = theta_0, wlen = gauss_footprint_len)
+    
+        # Mathematical definition of kernel flips y-axis
+        footprint = footprint[::-1, :]
+    else:
+        footprint = make_circular_footprint(radius = circular_footprint_radius)
+
+    # Initialize (x, y, v) cube
+    xyv_theta0 = np.zeros((naxis2, naxis1, len(channels)*4), np.float_)
+
+    for ch_i, ch_ in enumerate(channels):
+        # Grab channel-specific RHT data
+        data, data_fn = get_data(ch_, verbose = False)
+        ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
+    
+        # Sum relevant thetas
+        thetasum_bp = np.zeros((naxis2, naxis1), np.float_)
+        thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis = 1)
+    
+        if hilatonly is True:
+            thetasum_bp = thetasum_bp[:, 3000:]
+    
+        if binary_erode_dilate is False:
+            # Erode and dilate
+            eroded_thetasum_bp = erode_data(thetasum_bp, footprint = footprint, structure = footprint)
+            dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint, structure = footprint)
+    
+            # Turn into mask
+            mask = np.ones(dilated_thetasum_bp.shape)
+            mask[dilated_thetasum_bp <= 0] = 0
+    
+        else:
+            # Try making this a mask first, then binary erosion/dilation
+            masked_thetasum_bp = np.ones(thetasum_bp.shape)
+            masked_thetasum_bp[thetasum_bp <= 0] = 0
+            mask = binary_erosion(masked_thetasum_bp, structure = footprint)
+            mask = binary_dilation(mask, structure = footprint)
+    
+        # Apply background subtraction to velocity slice.
+        #background_subtracted_data = background_subtract(mask, SC_241_all[:, :, ch_], smooth_radius = smooth_radius, plotresults = False)
+    
+        # Get appropriate velocity slices for background subtraction
+        closestvels = closest_velocities(wide_vels, mask_vels[ch_])
+
+        # Apply background subtraction to velocity slice.
+        for cv_i, cv in enumerate(closestvels):
+            time0 = time.time()
+            wv_indx = list(wide_vels).index(cv)
+            background_subtracted_data = background_subtract(mask, SC_241_wide[wv_indx, :, :], smooth_radius = smooth_radius, plotresults = False)
+            
+            # Place into channel bin
+            xyv_theta0[:, :, ch_i + cv_i] = background_subtracted_data
+        
+            time1 = time.time()
+        
+            print("slice {} took {} seconds".format(cv_i, time1 - time0))
+    
+
+    hdr["NAXIS3"] = len(channels)*4
+    hdr["THETA0"] = theta_0
+    hdr["THETAB"] = theta_bandwidth
+    hdr["CRVAL3"] = np.nanmin(closest_velocities(wide_vels, mask_vels[channels[0]]))
+
+    # Deal with python fits axis ordering
+    xyv_theta0 = xyv_theta0.swapaxes(0, 2)
+    xyv_theta0 = xyv_theta0.swapaxes(1, 2)
+
+    fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+"_DR2_W_hilat.fits", xyv_theta0, hdr)
+
+    return xyv_theta0, hdr, mask
+    
 # This is where the stuff that gets executed when you run "python extract.py" goes.
-"""
 if __name__ == "__main__":
     
     # Center theta (degrees)
@@ -611,158 +741,16 @@ if __name__ == "__main__":
     # If True, binary erosion/dilation. If False, grey erosion/dilation.
     binary_erode_dilate = True
     
+    # If true, select only high latitude region 
+    hilatonly = True
     
     # Run code
     xyv_theta0, hdr, mask = single_theta_velocity_cube(theta_0 = theta_0, theta_bandwidth = theta_bandwidth, wlen = wlen,
                                smooth_radius = smooth_radius, gaussian_footprint = gaussian_footprint, 
                                gauss_footprint_len = gauss_footprint_len, circular_footprint_radius = circular_footprint_radius, 
-                               binary_erode_dilate = binary_erode_dilate)
+                               binary_erode_dilate = binary_erode_dilate, hilatonly = hilatonly)
 
     # Save output cube to fits file
     xyv_theta0_fn = "xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+".fits"
     fits.writeto(xyv_theta0_fn, xyv_theta0, hdr)
-"""
 
-#def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, smooth_radius = 60, gaussian_footprint = True, gauss_footprint_len = 5, circular_footprint_radius = 3, binary_erode_dilate = True):
-"""
-Creates cube of Backprojection(x, y, v | theta_0)
-where dimensions are x, y, and velocity
-and each velocity slice contains the backprojection for that velocity, at a single theta.
-
-theta_0         :: approximate center theta value (in degrees). 
-                   Actual value will be closest bin in xyt data.
-theta_bandwidth :: approximate width of theta range desired (in degrees)
-wlen            :: RHT window length
-
-"""
-
-theta_0 = 72
-
-theta_bandwidth = 10
-
-wlen = 75
-
-smooth_radius = 60
-
-gaussian_footprint = True
-
-gauss_footprint_len = 5
-
-circular_footprint_radius = 3
-
-binary_erode_dilate = True
-
-# Read in all SC_241 *original* data
-SC_241_original_fn = "/Volumes/DataDavy/GALFA/SC_241/cleaned/SC_241.66_28.675.best.fits"
-SC_241_all = fits.getdata(SC_241_original_fn)
-hdr = fits.getheader(SC_241_original_fn)
-
-# Velocity data should be third axis
-SC_241_all = SC_241_all.swapaxes(0, 2)
-SC_241_all = SC_241_all.swapaxes(0, 1)
-naxis2, naxis1, nchannels_total = SC_241_all.shape
-
-# Get Wide DR2 data in SC_241 region
-SC_241_wide_fn = "/Volumes/DataDavy/GALFA/DR2/SC_241_Wide/GALFA_HI_W_projected_SC_241.fits"
-SC_241_wide = fits.getdata(SC_241_wide_fn)
-
-# This is pretty slow with the full SC_241 region. I'm going to chop off the 3000 pixels at the lowest latitude.
-# Change header accordingly.
-SC_241_all = SC_241_all[:, 3000:, :]
-SC_241_wide = SC_241_wide[:, :, 3000:]
-hdr["CRPIX1"] = hdr["CRPIX1"] - 3000
-
-# Get thetas for given window length
-thets = RHT_tools.get_thets(wlen)
-
-# Get wide and mask velocities for application of mask to final data
-wide_vels = get_velocity_from_fits(SC_241_wide_fn)
-mask_vels = get_velocity_from_fits(SC_241_original_fn)
-
-# Get index of theta bin that is closest to theta_0
-indx_0 = (np.abs(thets - np.radians(theta_0))).argmin()
-
-# Get index of beginning and ending thetas that are approximately theta_bandwidth centered on theta_0
-indx_start = (np.abs(thets - (thets[indx_0] - np.radians(theta_bandwidth/2.0)))).argmin()
-indx_stop = (np.abs(thets - (thets[indx_0] + np.radians(theta_bandwidth/2.0)))).argmin()
-
-print("Actual theta range will be {} to {} degrees".format(np.degrees(thets[indx_start]), np.degrees(thets[indx_stop])))
-print("Theta indices will be {} to {}".format(indx_start, indx_stop))
-
-# Define velocity channels
-channels = [20]#[16, 17, 18, 19, 20, 21, 22, 23, 24]
-nchannels = len(channels)
-
-# Create a circular footprint for use in erosion / dilation.
-if gaussian_footprint is True:
-    footprint = make_gaussian_footprint(theta_0 = theta_0, wlen = gauss_footprint_len)
-    
-    # Mathematical definition of kernel flips y-axis
-    footprint = footprint[::-1, :]
-else:
-    footprint = make_circular_footprint(radius = circular_footprint_radius)
-
-# Initialize (x, y, v) cube
-xyv_theta0 = np.zeros((naxis2, naxis1, len(channels)*4), np.float_)
-
-for ch_i, ch_ in enumerate(channels):
-    # Grab channel-specific RHT data
-    data, data_fn = get_data(ch_, verbose = False)
-    ipoints, jpoints, rthetas, naxis1, naxis2 = RHT_tools.get_RHT_data(data_fn)
-    
-    # Sum relevant thetas
-    thetasum_bp = np.zeros((naxis2, naxis1), np.float_)
-    thetasum_bp[jpoints, ipoints] = np.nansum(rthetas[:, indx_start:(indx_stop + 1)], axis = 1)
-    
-    if binary_erode_dilate is False:
-        # Erode and dilate
-        eroded_thetasum_bp = erode_data(thetasum_bp, footprint = footprint, structure = footprint)
-        dilated_thetasum_bp = dilate_data(eroded_thetasum_bp, footprint = footprint, structure = footprint)
-    
-        # Turn into mask
-        mask = np.ones(dilated_thetasum_bp.shape)
-        mask[dilated_thetasum_bp <= 0] = 0
-    
-    else:
-        # Try making this a mask first, then binary erosion/dilation
-        masked_thetasum_bp = np.ones(thetasum_bp.shape)
-        masked_thetasum_bp[thetasum_bp <= 0] = 0
-        mask = binary_erosion(masked_thetasum_bp, structure = footprint)
-        mask = binary_dilation(mask, structure = footprint)
-    
-    # Apply background subtraction to velocity slice.
-    #background_subtracted_data = background_subtract(mask, SC_241_all[:, :, ch_], smooth_radius = smooth_radius, plotresults = False)
-    
-    # Get appropriate velocity slices for background subtraction
-    closestvels = closest_velocities(wide_vels, mask_vels[ch_])
-
-    # Apply background subtraction to velocity slice.
-    for cv_i, cv in enumerate(closestvels):
-        time0 = time.time()
-        wv_indx = list(wide_vels).index(cv)
-        background_subtracted_data = background_subtract(mask, SC_241_wide[wv_indx, :, :], smooth_radius = smooth_radius, plotresults = False)
-            
-        # Place into channel bin
-        #xyv_theta0[:, :, ch_i] = background_subtracted_data
-        xyv_theta0[:, :, ch_i + cv_i] = background_subtracted_data
-        
-        time1 = time.time()
-        
-        print("slice {} took {} seconds".format(cv_i, time1 - time0))
-    
-#return xyv_theta0
-#hdr["CHSTART"] = channels[0]
-#hdr["CHSTOP"] = channels[-1]
-hdr["NAXIS3"] = len(channels)*4
-hdr["THETA0"] = theta_0
-hdr["THETAB"] = theta_bandwidth
-#hdr["CRPIX3"] = hdr["CRPIX3"] - channels[0]
-hdr["CRVAL3"] = np.nanmin(closest_velocities(wide_vels, mask_vels[channels[0]]))
-
-# Deal with python fits axis ordering
-xyv_theta0 = xyv_theta0.swapaxes(0, 2)
-xyv_theta0 = xyv_theta0.swapaxes(1, 2)
-
-#fits.writeto("xyv_theta0_"+str(theta_0)+"_thetabandwidth_"+str(theta_bandwidth)+"_ch"+str(channels[0])+"_to_"+str(channels[-1])+"_new_naxis3.fits", xyv_theta0, hdr)
-
-#return xyv_theta0, hdr, mask
