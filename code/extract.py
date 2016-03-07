@@ -610,6 +610,7 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
     # Get Wide DR2 data in SC_241 region
     SC_241_wide_fn = "/Volumes/DataDavy/GALFA/DR2/SC_241_Wide/GALFA_HI_W_projected_SC_241.fits"
     SC_241_wide = fits.getdata(SC_241_wide_fn)
+    SC_241_wide_hdr = fits.getheader(SC_241_wide_fn)
 
     # This is pretty slow with the full SC_241 region. I'm going to chop off the 3000 pixels at the lowest latitude.
     # Change header accordingly.
@@ -704,7 +705,8 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
     hdr["NAXIS3"] = len(channels)*4
     hdr["THETA0"] = theta_0
     hdr["THETAB"] = theta_bandwidth
-    hdr["CRVAL3"] = np.nanmin(closest_velocities(wide_vels, mask_vels[channels[0]]))
+    hdr["CRVAL3"] = np.nanmin(closest_velocities(wide_vels, mask_vels[channels[0]]))*1000 # Convert to m/s
+    hdr["CDELT3"] = SC_241_wide_hdr["CDELT3"]
 
     # Deal with python fits axis ordering
     xyv_theta0 = xyv_theta0.swapaxes(0, 2)
