@@ -695,7 +695,8 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
             background_subtracted_data = background_subtract(mask, SC_241_wide[wv_indx, :, :], smooth_radius = smooth_radius, plotresults = False)
             
             # Place into channel bin
-            xyv_theta0[:, :, ch_i + cv_i] = background_subtracted_data
+            xyv_theta0[:, :, ch_i*4 + cv_i] = background_subtracted_data
+            print("placing into bin {}".format(ch_i + cv_i))
         
             time1 = time.time()
         
