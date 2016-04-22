@@ -691,17 +691,14 @@ def single_theta_velocity_cube(theta_0 = 72, theta_bandwidth = 10, wlen = 75, sm
         # These need to monotonically ascend
         closestvels = np.sort(closestvels) 
         
-        print("closest vels", closestvels)
-        print("wide vels", wide_vels)
         # Apply background subtraction to velocity slice.
         for cv_i, cv in enumerate(closestvels):
             time0 = time.time()
             wv_indx = list(wide_vels).index(cv)
-            print(cv_i, cv, wv_indx)
-            #background_subtracted_data = background_subtract(mask, SC_241_wide[wv_indx, :, :], smooth_radius = smooth_radius, plotresults = False)
+            background_subtracted_data = background_subtract(mask, SC_241_wide[wv_indx, :, :], smooth_radius = smooth_radius, plotresults = False)
             
             # Place into channel bin
-            #xyv_theta0[:, :, ch_i*4 + cv_i] = background_subtracted_data
+            xyv_theta0[:, :, ch_i*4 + cv_i] = background_subtracted_data
             print("placing into bin {}".format(ch_i*4 + cv_i))
         
             time1 = time.time()
