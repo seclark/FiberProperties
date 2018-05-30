@@ -5,6 +5,11 @@ from mechanize import Browser
 from bs4 import BeautifulSoup
 
 def grab_stilism_data(ell, bee):
+    """
+    Scraper for online Stilism tool. 
+    Automates inputting an (l, b) value and returns data table:
+    distances, E(B-V), distance uncertainty, E(B-V) uncertainty
+    """
 
     # open the stilism website
     browser = Browser()
@@ -21,8 +26,8 @@ def grab_stilism_data(ell, bee):
     content = response.read()
 
     # Parse HTML with beautifulsoup
-    soup = BeautifulSoup(content)
-
+    soup = BeautifulSoup(content, "lxml")
+    
     # The table of data has HTML tag 'sql'
     reddening_table = soup.find(id='sql')
 
@@ -30,15 +35,17 @@ def grab_stilism_data(ell, bee):
     rtstr = str(reddening_table)
 
     # remove beginning and ending characters 
-    rtstr = rtstr[218:-10]
+    #rtstr = rtstr[218:-10]
+    rtstr = rtstr[261:-10] # Stilism output changed somewhat. Would be better not to hard code this.
 
     # remove line break characters
     rtstr = rtstr.splitlines()
-
+    
     # put it all into a numpy array
     rtarray = np.zeros((len(rtstr), 4), np.float_)
     lastrowindex = len(rtstr) - 1
     for i, rowstr in enumerate(rtstr):
+    
         if i < lastrowindex:
             reduced_rowstr = rowstr[1:-2]
         
@@ -50,7 +57,7 @@ def grab_stilism_data(ell, bee):
     
         for _col in np.arange(4):
             rtarray[i, _col] = np.float(reduced_rowstr_split[_col][1:-1])
-        
+    
     distancebins = rtarray[:, 0]
     ebmv = rtarray[:, 1]
     dist_uncertainty = rtarray[:, 2]
@@ -59,9 +66,10 @@ def grab_stilism_data(ell, bee):
     return distancebins, ebmv, dist_uncertainty, ebmv_uncertainty
 
 # Load fiber properties from Larry's table
-all_prop = np.loadtxt("/Users/susanclark/Downloads/all_prop.txt", skiprows=1, delimiter=',')
-all_l = all_prop[:, 2]
-all_b = all_prop[:, 3]
+larry_table_fn = "/Users/susanclark/Dropbox/GALFA_filfind_yes_no_maybe/data_access/data_out/fourth_batch_all_prop.txt"
+all_prop = np.loadtxt(larry_table_fn, skiprows=1, delimiter=',')
+all_l = all_prop[:, 3]
+all_b = all_prop[:, 2]
 
 # output array will be (l, b, distance, ebmv, dist uncertainty, ebmv uncertainty, lower limit flag)
 lbdistances = np.zeros((len(all_l), 7), np.float_)
@@ -78,7 +86,8 @@ for i, (ell, bee) in enumerate(zip(all_l, all_b)):
 
     # grab data from stilism website
     distancebins, ebmv, dist_uncertainty, ebmv_uncertainty = grab_stilism_data(ell, bee)
-
+    
+    print(i, ell, bee, ebmv)
     if np.max(ebmv) < LB_value:
         print("LB wall not reached for l = {}, b = {}".format(ell, bee))
         lbdistances[i, 6] = 1 # Lower limit flag  
@@ -95,5 +104,5 @@ for i, (ell, bee) in enumerate(zip(all_l, all_b)):
         lbdistances[i, 4] = dist_uncertainty[LBval_indx]
         lbdistances[i, 5] = ebmv_uncertainty[LBval_indx]
 
-
+#np.savetxt("/Users/susanclark/Dropbox/GALFA_filfind_yes_no_maybe/data_access/data_out/fourth_batch_all_prop_lbdistances.txt", lbdistances)
     
