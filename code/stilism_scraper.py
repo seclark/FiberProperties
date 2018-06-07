@@ -69,7 +69,7 @@ def grab_stilism_data(ell, bee):
 larry_table_fn = "/Users/susanclark/Dropbox/GALFA_filfind_yes_no_maybe/data_access/data_out/fourth_batch_all_prop.txt"
 all_prop = np.loadtxt(larry_table_fn, skiprows=1, delimiter=',')
 all_l = all_prop[:, 3]
-all_b = all_prop[:, 2]
+all_b = all_prop[:, 4]
 
 # output array will be (l, b, distance, ebmv, dist uncertainty, ebmv uncertainty, lower limit flag)
 lbdistances = np.zeros((len(all_l), 7), np.float_)
@@ -104,5 +104,5 @@ for i, (ell, bee) in enumerate(zip(all_l, all_b)):
         lbdistances[i, 4] = dist_uncertainty[LBval_indx]
         lbdistances[i, 5] = ebmv_uncertainty[LBval_indx]
 
-#np.savetxt("/Users/susanclark/Dropbox/GALFA_filfind_yes_no_maybe/data_access/data_out/fourth_batch_all_prop_lbdistances.txt", lbdistances)
+np.savetxt("/Users/susanclark/Dropbox/GALFA_filfind_yes_no_maybe/data_access/data_out/fourth_batch_all_prop_corr_lbdistances.txt", lbdistances)
     
